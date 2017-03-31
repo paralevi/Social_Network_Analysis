@@ -3,7 +3,6 @@ import networkx as nx
 import numpy as np
 from scipy import sparse
 from sklearn.cross_validation import train_test_split
-import time
 import heapq
 K = 20
 
@@ -17,7 +16,6 @@ def jaccard_coefficient(G):
         row[i<<1] = col[i<<1|1] = E[i][0]
         col[i<<1] = row[i<<1|1] = E[i][1]
     M = sparse.coo_matrix((val, (row, col)), shape=(m_size+1, m_size+1))
-    print(M.toarray())
     M2 = M.dot(M).tolil()
     M2.setdiag(0)
     t=M.sum(axis=0)
@@ -52,13 +50,18 @@ def networkx(G):
     return list(map(lambda x:(x[1],x[2],-x[0]), max_heap))
 
 def main():
-    data = pd.read_csv('test.csv',names=['u','v','w'])
+    data = pd.read_csv('../YouTube-dataset/1-edges.csv',names=['u','v','w'])
     X_train,X_test,y_train,y_test=train_test_split(data[['u','v']],data['w'],test_size=0.1)
+
     G_train, G_test = nx.Graph(),nx.Graph()
     G_train.add_edges_from(X_train.values.tolist())
     G_test.add_edges_from(X_test.values.tolist())
+
     L = jaccard_coefficient(G_train)
+    '''
+    very slow! more than half an hour in test
     L = networkx(G_train)
+    '''
     correct,i = 0,0
     for u,v,j in L:
         print(u,v,j,end=' ')
