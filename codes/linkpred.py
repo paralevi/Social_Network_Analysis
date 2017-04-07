@@ -19,6 +19,7 @@ class link_prediction(object):
         self.pred = None
         self.predCN = None
         self.predJC = None
+        self.predRA = None
 
     def _build_matrix(self, E, m_size):
         l_size = len(E)
@@ -65,15 +66,43 @@ class link_prediction(object):
         index=zip(row,col)
         del row,col
         max_heap=[]
-        for i,j in index:
-            if M2[i,j]==0 or self.adj_train[i,j]:
+        for u,v in index:
+            if M2[u,v]==0 or self.adj_train[u,v]:
                 continue
-            M2[j,i]=0
-            jc = M2[i,j]/(t[0,i]+t[0,j]-M2[i,j])
-            max_heap.append((jc,i,j))
+            M2[v,u]=0
+            jc = M2[u,v]/(t[0,i]+t[0,j]-M2[u,v])
+            max_heap.append((jc,u,v))
         # pred = np.array(np.unravel_index(np.argsort((M.A).flatten(),axis=0)[-K:],M.shape)).T[::-1]
         self.predJC = list(map(lambda x:(x[1],x[2],x[0]), heapq.nlargest(range,max_heap)))
         self.pred = self.predJC[:K]
+        return self.pred
+
+    def resource_allocation(self,K,range=200):
+        if self.predRA is not None:
+            self.pred = self.predRA[:K]
+            return self.pred
+        M2 = self.M_train.dot(self.M_train).tolil()
+        M2.setdiag(0)
+        t=self.M_train.sum(axis=0)
+        t=1/np.array(t)
+        row,col=M2.nonzero()
+        index=zip(row,col)
+        del row,col
+        max_heap=[]
+        x=0
+        for u,v in index:
+            if M2[u,v]==0 or self.adj_train[u,v]:
+                continue
+            M2[v,u]=0
+            if u != x:
+                x=u
+                print(u)
+            ra = sum((self.adj_train[u]&self.adj_train[v])*t[0])
+            max_heap.append((ra,u,v))
+        self.predRA = max_heap
+        print(max_heap)
+        self.predRA = list(map(lambda x:(x[1],x[2],x[0]), heapq.nlargest(range if len(max_heap)<range else len(max_heap),max_heap)))
+        self.pred = self.predRA[:K]
         return self.pred
 
     def test_precision(self,detail=False):
